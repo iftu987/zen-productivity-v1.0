@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zen Command V33: Absolute Final</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- CORE THEME --- */
+        :root {
+            --bg-deep: #02040a;       
+            --glass-panel: rgba(20, 25, 35, 0.9); 
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-primary: #e6edf3;
+            --accent: #3b82f6;
+            --neon-green: #00ff41;
+            --neon-white: #ffffff;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: var(--bg-deep); 
+            color: var(--text-primary); 
+            overflow: hidden; 
+            margin: 0;
+        }
+
+        #starfield { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+
+        /* --- UI COMPONENTS --- */
+        .glass-panel { background: var(--glass-panel); backdrop-filter: blur(20px); border: 1px solid var(--border-color); transition: all 0.3s ease; }
+        
+        /* --- 1. MINIMALIST HEADER --- */
+        .minimal-tabs-container { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 2rem; position: relative; }
+        .min-tab { text-align: center; padding: 1rem 0; font-size: 0.9rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #64748b; cursor: pointer; transition: color 0.3s ease; position: relative; }
+        .min-tab:hover { color: #94a3b8; }
+        .min-tab.active { color: white; }
+        .min-tab::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 3px; background: transparent; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); transform: scaleX(0); }
+        .min-tab.active::after { transform: scaleX(1); }
+        .min-tab.active[data-tab="empire"]::after { background: #3b82f6; box-shadow: 0 -2px 15px rgba(59, 130, 246, 0.6); }
+        .min-tab.active[data-tab="life"]::after { background: #f97316; box-shadow: 0 -2px 15px rgba(249, 115, 22, 0.6); }
+        .min-tab.active[data-tab="body"]::after { background: #22c55e; box-shadow: 0 -2px 15px rgba(34, 197, 94, 0.6); }
+        .min-tab.active[data-tab="mind"]::after { background: #a855f7; box-shadow: 0 -2px 15px rgba(168, 85, 247, 0.6); }
+
+        /* --- 2. LIQUID TASKS --- */
+        .task-item-anim { position: relative; width: 100%; min-height: 70px; background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); border-radius: 16px; cursor: pointer; overflow: hidden; transition: transform 0.2s ease, border-color 0.2s; display: flex; align-items: center; padding: 0 20px; margin-bottom: 12px; border: 1px solid rgba(255, 255, 255, 0.08); }
+        .task-item-anim:hover { border-color: rgba(255,255,255,0.3); transform: translateX(4px); }
+        .task-item-anim:active { transform: scale(0.98); }
+        .task-liquid-bg { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; z-index: 1; transition: width 1.2s cubic-bezier(0.65, 0, 0.35, 1); }
+        .liquid-empire { background: linear-gradient(90deg, #2563eb, #3b82f6); }
+        .liquid-life { background: linear-gradient(90deg, #ea580c, #f97316); }
+        .liquid-body { background: linear-gradient(90deg, #16a34a, #22c55e); }
+        .liquid-mind { background: linear-gradient(90deg, #9333ea, #a855f7); }
+        .task-content { position: relative; z-index: 2; display: flex; align-items: center; gap: 15px; width: 100%; transition: transform 0.5s; }
+        .task-item-anim.is-done .task-liquid-bg { width: 100%; }
+        .task-item-anim.is-done .task-content { color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); font-weight: bold; }
+        .task-item-anim.is-done .check-icon { transform: scale(1.2); color: white !important; }
+        @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); } 50% { box-shadow: 0 0 25px rgba(255, 255, 255, 0.3); border-color: white; } 100% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); } }
+        .task-item-anim.is-done { animation: pulseGlow 3s infinite ease-in-out; animation-delay: 1.2s; pointer-events: none; }
+
+        /* --- 3. VIVID GALACTIC CALENDAR (FROM V31) --- */
+        .cal-day {
+            aspect-ratio: 1; border-radius: 50%; position: relative; cursor: pointer;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            background: rgba(255, 255, 255, 0.05); /* Lighter base */
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        .cal-day:hover { transform: scale(1.15); border-color: white; z-index: 20; }
+        .day-today { border: 2px solid #3b82f6 !important; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        
+        .nebula-fill {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.8), rgba(59, 130, 246, 0.6), transparent 80%);
+            filter: blur(2px); animation: nebula-pulse 3s infinite alternate; z-index: 1;
+        }
+        .star-core {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at 30% 30%, #fff, #fbbf24, #d97706);
+            box-shadow: 0 0 20px #fbbf24; animation: sun-spin 10s linear infinite; z-index: 1;
+        }
+        .dead-moon { background: #1e293b; box-shadow: inset 4px 4px 10px rgba(0,0,0,0.6); border-color: #475569; }
+        
+        .day-number { position: relative; z-index: 10; font-weight: 800; font-size: 0.85rem; text-shadow: 0 2px 4px rgba(0,0,0,0.9); }
+        @keyframes nebula-pulse { 0% { opacity: 0.6; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1.1); } }
+        @keyframes sun-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- 4. EXTRAS & NEON ANALYTICS --- */
+        .bento-card { background: rgba(30, 41, 59, 0.4); backdrop-filter: blur(10px); border: 1px solid var(--border-color); border-radius: 16px; transition: transform 0.2s; }
+        .bento-card:hover { border-color: #60a5fa; transform: translateY(-2px); }
+        .analytics-box { background: rgba(10, 10, 15, 0.8); border: 2px solid #ffffff; box-shadow: 0 0 15px rgba(255, 255, 255, 0.3); border-radius: 16px; backdrop-filter: blur(12px); }
+        .chart-bar { width: 100%; background: linear-gradient(to top, #064e3b, #22c55e); border-top: 2px solid #a7f3d0; border-radius: 4px 4px 0 0; opacity: 0.8; transition: height 0.6s; cursor: pointer; box-shadow: 0 0 10px rgba(34, 197, 94, 0.3); }
+        .heat-cell { aspect-ratio: 1; border-radius: 3px; background: rgba(255,255,255,0.05); transition: all 0.2s; }
+        .heat-4 { background: #00ff41; box-shadow: 0 0 10px #00ff41; }
+        .reactor-ring { width: 150px; height: 150px; border-radius: 50%; background: conic-gradient(#00ff41 0%, rgba(255,255,255,0.05) 0%); position: relative; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 30px rgba(0, 255, 65, 0.4); }
+        .reactor-ring::before { content: ''; position: absolute; width: 85%; height: 85%; background: #02040a; border-radius: 50%; }
+        
+        /* --- 5. SYSTEM UTILS --- */
+        body.zen-active .sidebar-left { transform: translateX(-100%); opacity: 0; }
+        body.zen-active .sidebar-right { transform: translateX(100%); opacity: 0; }
+        body.zen-active .main-feed { max-width: 1100px; margin: 0 auto; width: 95%; }
+        .sidebar { transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease; }
+        .main-feed { transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .hidden { display: none !important; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .audio-playing { animation: pulse-green 2s infinite; border-color: #22c55e !important; color: #22c55e !important; background: rgba(34, 197, 94, 0.1) !important; }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } }
+        .wisdom-card { font-family: 'JetBrains Mono', monospace; border-left: 4px solid #eab308; background: linear-gradient(90deg, rgba(234, 179, 8, 0.05) 0%, transparent 100%); }
+    </style>
+</head>
+<body class="h-screen w-screen flex overflow-hidden relative">
+
+    <canvas id="starfield"></canvas>
+    
+    <audio id="bgMusic" loop></audio> 
+    <audio id="taskSound"><source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mpeg"></audio>
+
+    <div id="sidebarLeft" class="sidebar sidebar-left w-64 h-full flex flex-col border-r border-slate-800/50 relative z-10 glass-panel rounded-none border-t-0 border-b-0 border-l-0 shrink-0">
+        <div class="p-6 border-b border-slate-700/50 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">I</div>
+            <div>
+                <h3 class="font-bold text-white">Iftikhar</h3>
+                <p class="text-xs text-blue-400">Commander</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2">
+            <button onclick="switchView('dashboard')" id="nav-dashboard" class="w-full text-left px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 transition"><i class="fas fa-home mr-3"></i> Dashboard</button>
+            <button onclick="switchView('calendar')" id="nav-calendar" class="w-full text-left px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 transition"><i class="fas fa-meteor mr-3"></i> Calendar</button>
+            <button onclick="switchView('analytics')" id="nav-analytics" class="w-full text-left px-4 py-3 rounded-xl hover:bg-white/5 text-slate-300 transition"><i class="fas fa-chart-pie mr-3"></i> Analytics</button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-700/50">
+            <button id="enableAudioBtn" onclick="enableAudio()" class="w-full py-3 rounded border border-slate-600 text-xs text-slate-400 hover:text-white hover:border-white transition flex items-center justify-center gap-2">
+                <i class="fas fa-power-off"></i> Initialize Audio Systems
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-1 h-full overflow-y-auto relative z-10 p-4 md:p-8">
+        
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-white"><span id="greeting">Welcome</span>, Iftikhar</h1>
+            <button onclick="toggleZenMode()" class="px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg text-xs text-slate-300 hover:bg-blue-600 hover:text-white transition">
+                <i class="fas fa-expand mr-2"></i> Focus Mode
+            </button>
+        </header>
+
+        <div id="view-dashboard" class="animate-fade-in">
+            <div class="minimal-tabs-container">
+                <div onclick="filterTasks('empire')" class="min-tab active" data-tab="empire">Empire</div>
+                <div onclick="filterTasks('life')" class="min-tab" data-tab="life">Life</div>
+                <div onclick="filterTasks('body')" class="min-tab" data-tab="body">Body</div>
+                <div onclick="filterTasks('mind')" class="min-tab" data-tab="mind">Mind</div>
+            </div>
+
+            <div class="mb-8 relative">
+                 <input type="text" id="taskInput" placeholder="Add mission to Empire..." class="w-full bg-slate-800/50 text-white p-4 pl-12 rounded-xl border border-slate-700 focus:border-blue-500 outline-none transition" onkeypress="handleEnter(event)">
+                 <i class="fas fa-plus absolute left-5 top-5 text-slate-500"></i>
+            </div>
+
+            <div class="space-y-4" id="taskList"></div>
+
+            <div class="mt-12 pt-8 border-t border-slate-800">
+                <div class="flex justify-between items-end mb-4">
+                    <h3 class="text-slate-500 text-xs font-bold uppercase tracking-widest">Daily Protocols</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="habitInput" placeholder="New Protocol..." class="bg-slate-800/50 border border-slate-700 text-white text-xs px-3 py-1.5 rounded-lg focus:border-blue-500 outline-none w-32 md:w-48 transition" onkeypress="handleHabitEnter(event)">
+                        <button onclick="addCustomHabit()" class="bg-blue-600/20 text-blue-400 hover:text-white border border-blue-500/50 px-3 py-1.5 rounded-lg text-xs transition"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-4 gap-4" id="habitGrid"></div>
+            </div>
+        </div>
+
+        <div id="view-calendar" class="hidden animate-fade-in">
+            <h2 class="text-xl font-bold text-white mb-6">Galactic Log</h2>
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="grid grid-cols-7 mb-4 text-center text-slate-500 text-xs uppercase"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
+                <div id="calendarGrid" class="grid grid-cols-7 gap-4"></div>
+            </div>
+            <p class="text-center text-xs text-slate-500 mt-4">* Click any date to schedule a future mission.</p>
+        </div>
+
+        <div id="view-analytics" class="hidden animate-fade-in">
+            <h2 class="text-xl font-bold text-white mb-6">Quantum Data</h2>
+            <div class="grid grid-cols-3 gap-6 mb-6">
+                <div class="analytics-box p-6 flex flex-col items-center justify-center">
+                    <h3 class="text-slate-400 text-xs font-bold uppercase mb-4">Reactor</h3>
+                    <div class="reactor-ring" id="dailyReactor"><div class="text-2xl font-bold text-white" id="dailyPercent">0%</div></div>
+                </div>
+                <div class="col-span-2 analytics-box p-6">
+                    <h3 class="text-slate-400 text-xs font-bold uppercase mb-4">Wave</h3>
+                    <div class="chart-bar-container" style="display:flex; align-items:flex-end; height:120px; gap:5px;" id="weeklyChart"></div>
+                </div>
+            </div>
+            <div class="analytics-box p-6">
+                <h3 class="text-slate-400 text-xs font-bold uppercase mb-4">Constellation</h3>
+                <div class="heatmap-grid" style="display:grid; grid-template-columns:repeat(53,1fr); gap:2px;" id="yearlyMap"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="w-80 h-full border-l border-slate-800/50 flex flex-col relative z-10 glass-panel shrink-0 sidebar sidebar-right">
+        <div class="p-8 border-b border-slate-700/50 wisdom-card">
+            <div class="flex items-center gap-2 mb-4"><i class="fas fa-satellite-dish text-yellow-400 animate-pulse"></i><span class="text-xs font-bold text-yellow-500 uppercase tracking-widest">Daily Transmission</span></div>
+            <p id="dailyQuote" class="text-sm text-white font-mono leading-relaxed min-h-[60px]"></p><span class="cursor-blink text-yellow-500">_</span>
+        </div>
+        <div class="flex-1 flex flex-col p-6">
+            <h3 class="text-white font-bold mb-4 text-sm"><i class="fas fa-database text-blue-500 mr-2"></i> The Vault</h3>
+            <textarea id="brainDump" class="flex-1 w-full bg-slate-800/50 border border-slate-700 rounded-xl p-4 text-slate-300 text-xs leading-relaxed resize-none focus:outline-none focus:border-blue-500" placeholder="Store data..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        // CONFIG
+        const AUDIO_SYNC_MS = 1200; 
+        
+        // --- CHROMATIC TUNNEL STARS (BLUE/PURPLE/CYAN/GOLD) ---
+        const starColors = ["#3b82f6", "#a855f7", "#06b6d4", "#eab308", "#ffffff"];
+        const canvas = document.getElementById('starfield'); const ctx = canvas.getContext('2d'); let stars = []; let cx, cy; let warpSpeed = 3;
+
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; cx = canvas.width/2; cy = canvas.height/2; initStars(); }
+        function initStars() { stars = []; for(let i=0; i<150; i++) { stars.push({ x:(Math.random()-0.5)*canvas.width*2, y:(Math.random()-0.5)*canvas.height*2, z:Math.random()*canvas.width, color: starColors[Math.floor(Math.random() * starColors.length)] }); } }
+        function animateWarp() { 
+            ctx.fillStyle = `rgba(2, 4, 10, 0.4)`; ctx.fillRect(0,0, canvas.width, canvas.height); 
+            stars.forEach(star => { 
+                star.z -= warpSpeed; 
+                if(star.z <= 0) { star.z = canvas.width; star.x=(Math.random()-0.5)*canvas.width*2; star.y=(Math.random()-0.5)*canvas.height*2; } 
+                const x = (star.x/star.z)*100+cx; const y = (star.y/star.z)*100+cy; const size = (1-star.z/canvas.width)*4; 
+                if(x>0 && x<canvas.width && y>0 && y<canvas.height) { 
+                    ctx.beginPath(); ctx.arc(x,y,size,0,Math.PI*2); ctx.fillStyle = star.color; ctx.globalAlpha = 1-star.z/canvas.width; ctx.fill(); ctx.globalAlpha = 1; 
+                } 
+            }); 
+            requestAnimationFrame(animateWarp); 
+        }
+        window.addEventListener('resize', resizeCanvas); resizeCanvas(); animateWarp();
+
+        // --- INSPIRING/HOPE AUDIO PLAYLIST ---
+        const musicPlaylist = [
+            "https://cdn.pixabay.com/download/audio/2022/10/25/audio_1f30a9e704.mp3", 
+            "https://cdn.pixabay.com/download/audio/2022/01/21/audio_31743c58bd.mp3", 
+            "https://cdn.pixabay.com/download/audio/2021/11/01/audio_00fa5593f3.mp3", 
+            "https://cdn.pixabay.com/download/audio/2022/05/05/audio_1322055cb5.mp3"
+        ];
+
+        // --- DATA ---
+        let appData = JSON.parse(localStorage.getItem('zenDataV33')) || { 
+            tasks: [], habits: ["Hydrate", "Read", "Gym", "Focus", "Journal"], vault: "", 
+            lastQuoteDate: "", savedQuote: "" 
+        };
+        let currentFilter = 'empire';
+        const quotes = ["The obstacle is the way. - Marcus Aurelius", "Focus is not saying yes, it is saying no. - Steve Jobs", "Discipline is freedom. - Jocko Willink", "Your future is created by what you do today. - Satya Nadella"];
+
+        // INIT
+        function init() {
+            const hr = new Date().getHours();
+            document.getElementById('greeting').innerText = hr < 12 ? "Good Morning" : hr < 18 ? "Good Afternoon" : "Good Evening";
+            
+            const trackIdx = new Date().getDay() % musicPlaylist.length;
+            document.getElementById('bgMusic').src = musicPlaylist[trackIdx];
+
+            const today = new Date().toDateString();
+            if(appData.lastQuoteDate !== today) {
+                appData.savedQuote = quotes[Math.floor(Math.random()*quotes.length)];
+                appData.lastQuoteDate = today;
+                save();
+            }
+            typeWriter(appData.savedQuote || quotes[0], 0);
+
+            document.getElementById('brainDump').value = appData.vault;
+            document.getElementById('brainDump').addEventListener('input', (e) => { appData.vault = e.target.value; save(); });
+            
+            // AUTO DEMO: If empty today, add task so user sees animation
+            const todaysTasks = appData.tasks.filter(t => t.date === today);
+            if(todaysTasks.length === 0 && appData.tasks.length === 0) {
+                appData.tasks.push({ id: Date.now(), text: "Initiate System Check", category: "empire", done: false, date: today });
+                save();
+            }
+
+            renderTasks(currentFilter); renderHabits(); renderCalendar(); renderAnalytics();
+        }
+
+        // LOGIC
+        function triggerTaskCompletion(id, element) {
+            if (element.classList.contains('is-done')) return;
+            const audio = document.getElementById('taskSound');
+            if (audio) { audio.currentTime = 0; audio.volume = 1.0; audio.play().catch(e => console.log("Audio blocked", e)); }
+            element.classList.add('is-done');
+            const icon = element.querySelector('.check-icon');
+            icon.classList.remove('fa-circle'); icon.classList.add('fa-check-circle');
+            setTimeout(() => {
+                const rect = element.getBoundingClientRect();
+                const x = (rect.left + rect.width / 2) / window.innerWidth;
+                const y = (rect.top + rect.height / 2) / window.innerHeight;
+                let colors = ['#ffffff'];
+                if(currentFilter === 'empire') colors = ['#3b82f6', '#2563eb'];
+                if(currentFilter === 'body') colors = ['#22c55e', '#16a34a'];
+                if(currentFilter === 'mind') colors = ['#a855f7', '#9333ea'];
+                if(currentFilter === 'life') colors = ['#f97316', '#ea580c'];
+                confetti({ particleCount: 120, spread: 80, origin: { x, y }, colors: colors, disableForReducedMotion: true });
+                const task = appData.tasks.find(t => t.id === id); if(task) task.done = true; save();
+                renderAnalytics(); renderCalendar(); 
+            }, AUDIO_SYNC_MS);
+        }
+
+        function renderTasks(filter) {
+            const list = document.getElementById('taskList'); list.innerHTML = '';
+            const todayStr = new Date().toDateString();
+            const tasks = appData.tasks.filter(t => t.date === todayStr && t.category === filter);
+            if(tasks.length === 0) list.innerHTML = `<div class="text-center text-slate-600 text-xs py-10 border border-dashed border-slate-800 rounded-lg">No active directives.</div>`;
+            tasks.forEach(task => {
+                let liqClass = 'liquid-empire';
+                if(task.category === 'life') liqClass = 'liquid-life';
+                if(task.category === 'body') liqClass = 'liquid-body';
+                if(task.category === 'mind') liqClass = 'liquid-mind';
+                const el = document.createElement('div');
+                el.className = `task-item-anim ${task.done ? 'is-done' : ''}`;
+                el.onclick = () => triggerTaskCompletion(task.id, el);
+                el.innerHTML = `<div class="task-liquid-bg ${liqClass}"></div><div class="task-content"><i class="far ${task.done ? 'fa-check-circle' : 'fa-circle'} check-icon text-slate-400"></i><span class="text-sm font-medium">${task.text}</span></div><button onclick="deleteTask(event, ${task.id})" class="relative z-10 ml-auto text-slate-600 hover:text-red-400 p-2"><i class="fas fa-times"></i></button>`;
+                list.appendChild(el);
+            });
+        }
+
+        function filterTasks(category) {
+            currentFilter = category; renderTasks(category);
+            document.querySelectorAll('.min-tab').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.min-tab[data-tab="${category}"]`).classList.add('active');
+            document.getElementById('taskInput').placeholder = `Add to ${category.charAt(0).toUpperCase() + category.slice(1)}...`;
+        }
+        function handleEnter(e) { if(e.key === 'Enter' && e.target.value.trim()) { appData.tasks.unshift({ id: Date.now(), text: e.target.value, category: currentFilter, done: false, date: new Date().toDateString() }); e.target.value = ''; save(); renderTasks(currentFilter); } }
+        function deleteTask(e, id) { e.stopPropagation(); if(confirm("Abort mission?")) { appData.tasks = appData.tasks.filter(t => t.id !== id); save(); renderTasks(currentFilter); } }
+        function save() { localStorage.setItem('zenDataV33', JSON.stringify(appData)); }
+        function enableAudio() { const audio = document.getElementById('bgMusic'); const btn = document.getElementById('enableAudioBtn'); audio.volume = 0.4; if(audio.paused) { audio.play(); btn.innerHTML = '<i class="fas fa-signal"></i> Systems Online'; btn.classList.add('audio-playing'); } else { audio.pause(); btn.innerHTML = '<i class="fas fa-power-off"></i> Initialize Audio'; btn.classList.remove('audio-playing'); } }
+        function typeWriter(txt, i) { if (i<txt.length) { document.getElementById("dailyQuote").innerHTML = txt.substring(0, i+1); setTimeout(()=>typeWriter(txt, i+1), 40); } }
+        
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid'); grid.innerHTML = '';
+            const date = new Date(); const year = date.getFullYear(); const month = date.getMonth();
+            const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
+            for(let i=0; i<firstDay; i++) grid.innerHTML += `<div></div>`;
+            for(let i=1; i<=daysInMonth; i++) {
+                const dayDate = new Date(year, month, i).toDateString();
+                const isToday = i === date.getDate();
+                const dayTasks = appData.tasks.filter(t => t.date === dayDate);
+                const total = dayTasks.length; const done = dayTasks.filter(t => t.done).length;
+                let content = ''; let dayClass = '';
+                
+                if(total > 0) {
+                    const fill = (done / total) * 100;
+                    if(fill === 0) {
+                        content = `<div class="nebula-fill" style="opacity:0.5"></div>`;
+                    } else if(fill === 100) {
+                        content = `<div class="star-core"></div><div class="orbit-ring"></div>`;
+                    } else {
+                        content = `<div class="nebula-fill" style="opacity:${fill/100}"></div>`;
+                    }
+                } else if(new Date(dayDate) < new Date(new Date().toDateString())) { dayClass = 'dead-moon'; }
+                
+                const div = document.createElement('div'); div.className = `cal-day ${dayClass}`; 
+                if(isToday) div.classList.add('day-today'); 
+                
+                div.innerHTML = `${content}<span class="day-number ${isToday?'text-white':'text-slate-400'}">${i}</span>`;
+                div.onclick = () => scheduleTask(dayDate, i);
+                grid.appendChild(div);
+            }
+        }
+        function scheduleTask(dateStr, dayNum) { const t = prompt(`Schedule mission for ${dateStr}?`); if(t) { appData.tasks.push({ id: Date.now(), text: t, category: currentFilter, done: false, date: dateStr }); save(); alert(`Mission Added to Day ${dayNum}.`); } }
+
+        function handleHabitEnter(e) { if(e.key === 'Enter') addCustomHabit(); }
+        function addCustomHabit() { const input = document.getElementById('habitInput'); const name = input.value.trim(); if(name) { appData.habits.push(name); save(); renderHabits(); input.value = ''; } }
+        function getEmojiForHabit(name) { const n = name.toLowerCase(); const map = { 'run':'🏃‍♂️','jog':'🏃‍♂️','walk':'🚶‍♂️','hike':'🥾','gym':'🏋️‍♂️','lift':'💪','workout':'💪','train':'👟','water':'💧','drink':'🚰','hydrate':'💧','read':'📚','book':'📖','study':'🎓','learn':'🧠','code':'💻','dev':'⌨️','program':'🖥️','hack':'💾','meditate':'🧘','mind':'🧠','focus':'🎯','breath':'🌬️','sleep':'😴','rest':'🛌','nap':'💤','write':'✍️','journal':'📓','diary':'📔','music':'🎵','piano':'🎹','guitar':'🎸','art':'🎨','draw':'✏️','paint':'🖌️','cook':'🍳','eat':'🥗','food':'🍎','diet':'🥦','money':'💰','save':'🏦','finance':'📈','invest':'💵','clean':'🧹','tidy':'✨','chores':'🧺' }; for (let key in map) { if (n.includes(key)) return map[key]; } return '⚡'; }
+        function renderHabits() { const grid = document.getElementById('habitGrid'); grid.innerHTML = ''; appData.habits.forEach((habit, idx) => { const emoji = getEmojiForHabit(habit); const div = document.createElement('div'); div.className = "bento-card p-3 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-800/50 transition relative group"; div.onclick = function() { this.classList.toggle('bg-blue-600/20'); this.classList.toggle('border-blue-500'); }; div.innerHTML = `<button onclick="removeHabit(event, ${idx})" class="absolute top-1 right-2 text-[10px] text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100">x</button><span class="text-2xl mb-2 filter drop-shadow-lg transition-transform group-hover:scale-110">${emoji}</span><span class="text-xs text-slate-300 capitalize">${habit}</span>`; grid.appendChild(div); }); }
+        function removeHabit(e, i) { e.stopPropagation(); if(confirm("Remove habit?")) { appData.habits.splice(i, 1); save(); renderHabits(); } }
+
+        function renderAnalytics() { 
+            const w=document.getElementById('weeklyChart'); w.innerHTML=''; const days = []; for(let i=6; i>=0; i--) { const d = new Date(); d.setDate(d.getDate() - i); days.push(d.toDateString()); } let maxTasks = 0; const weekData = days.map(day => { const count = appData.tasks.filter(t => t.date === day && t.done).length; if(count > maxTasks) maxTasks = count; return { day, count }; });
+            weekData.forEach(d => { const height = maxTasks === 0 ? 5 : (d.count / maxTasks) * 100; const bar = document.createElement('div'); bar.className = 'chart-bar'; bar.style.height = `${Math.max(height, 5)}%`; w.appendChild(bar); });
+            const y=document.getElementById('yearlyMap'); y.innerHTML=''; for(let i=0;i<100;i++) { const d = new Date(); d.setDate(d.getDate() - i); const dayStr = d.toDateString(); const count = appData.tasks.filter(t => t.date === dayStr && t.done).length; let c = 'heat-1'; if(count>0)c='heat-2'; if(count>2)c='heat-3'; if(count>4)c='heat-4'; const baseClass = count === 0 ? 'bg-slate-800/30' : ''; const cell = document.createElement('div'); cell.className = `heat-cell ${count>0?c:baseClass}`; cell.title = `${dayStr}: ${count}`; y.appendChild(cell); }
+            const todayStr = new Date().toDateString(); const dayTasks = appData.tasks.filter(t => t.date === todayStr); const total = dayTasks.length; const done = dayTasks.filter(t => t.done).length; const percent = total === 0 ? 0 : Math.round((done / total) * 100); document.getElementById('dailyReactor').style.background = `conic-gradient(#00ff41 ${percent}%, rgba(255,255,255,0.05) ${percent}%)`; document.getElementById('dailyPercent').innerText = `${percent}%`;
+        }
+        function switchView(v) { ['dashboard','calendar','analytics'].forEach(id=>document.getElementById('view-'+id).classList.add('hidden')); document.getElementById('view-'+v).classList.remove('hidden'); if(v==='calendar')renderCalendar(); if(v==='analytics')renderAnalytics(); }
+        function toggleZenMode() { document.body.classList.toggle('zen-active'); }
+
+        init();
+    </script>
+</body>
+</html>
